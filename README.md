@@ -4,7 +4,7 @@ University of Amsterdam Deep Learning for Natural Language Processing Fall 2020 
 
 ## Authors
 
-- Leila Talha
+- Leila F.C. Talha
 - Michael J. Neely
 - Stefan F. Schouten
 
