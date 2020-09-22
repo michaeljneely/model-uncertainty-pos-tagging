@@ -65,6 +65,7 @@ local encoder_hidden_size = 400;
                         "std": 1,
                     }
                 ],
+                ["text_field_embedder.token_embedder_tokens.embed_0.weight", "zero"]
             ]
         }
     },
