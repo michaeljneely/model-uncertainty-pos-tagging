@@ -1,5 +1,5 @@
 local batch_size = 64;
-local embedding_dim = 400;
+local embedding_dim = 300;
 local encoder_hidden_size = 400;
 
 {
@@ -15,9 +15,21 @@ local encoder_hidden_size = 400;
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
-                    "type": "embedding",
-                    "embedding_dim": embedding_dim,
-                    "trainable": true
+                    "type": "summed-embedding",
+                    "token_embedders":
+                    [
+                        {
+                            "type": "embedding",
+                            "embedding_dim": embedding_dim,
+                            "trainable": true
+                        },
+                        {
+                            "type": "embedding",
+                            "pretrained_file": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
+                            "embedding_dim": embedding_dim,
+                            "trainable": false
+                        }
+                    ]
                 }
             }
         },
@@ -35,12 +47,24 @@ local encoder_hidden_size = 400;
                 {
                     "type": "bi-feedforward",
                     "feedforward": {
-                        "input_dim": 2*encoder_hidden_size,
+                        "input_dim": 2 * encoder_hidden_size,
                         "num_layers": 1,
                         "hidden_dims": encoder_hidden_size,
                         "activations": "elu"
                     }
                 }
+            ]
+        },
+        "initializer": {
+            "regexes": [
+                [
+                    "encoder.encoder1._feedforward._linear_layers.0.weight", 
+                    {
+                        "type": "normal",
+                        "mean": 0,
+                        "std": 1,
+                    }
+                ],
             ]
         }
     },
