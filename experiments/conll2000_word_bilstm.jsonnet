@@ -37,6 +37,11 @@ local encoder_hidden_size = 400;
             "type": "compose",
             "encoders": [
                 {
+                    "type": "dropout",
+                    "p": 0.33,
+                    "input_dim": embedding_dim
+                },
+                {
                     "type": "lstm",
                     "bidirectional": true,
                     "input_size": embedding_dim,
