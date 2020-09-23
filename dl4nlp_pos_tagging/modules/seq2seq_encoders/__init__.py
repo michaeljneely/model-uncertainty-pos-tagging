@@ -1,0 +1,1 @@
+from dl4nlp_pos_tagging.modules.seq2seq_encoders.bi_feedforward_encoder import BiFeedForwardEncoder
