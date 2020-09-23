@@ -22,7 +22,7 @@ class Seq2SeqDropout(Seq2SeqEncoder):
         """
         outputs = self.dropout(inputs)
 
-        if mask == None:
+        if mask != None:
             outputs *= mask.unsqueeze(-1)
 
         return outputs
