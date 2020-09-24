@@ -4,7 +4,18 @@ local encoder_hidden_size = 400;
 
 {
     "dataset_reader": {
-        "type": "conll2000"
+        "type": "conll2000",
+        "token_indexers": {
+            "tokens": {
+                "type": "single_id"
+            },
+            "token_characters": {
+                "type": "characters",
+                "character_tokenizer": {
+                    "byte_encoding": "utf-8"
+                }
+            }
+        }
     },
     "train_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/train.txt"]),
     "test_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/test.txt"]),
@@ -30,7 +41,8 @@ local encoder_hidden_size = 400;
                             "trainable": false
                         }
                     ]
-                }
+                },
+                "token_characters": "empty"
             }
         },
         "encoder": {
