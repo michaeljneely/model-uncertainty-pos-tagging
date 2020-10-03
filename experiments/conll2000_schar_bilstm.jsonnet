@@ -1,6 +1,6 @@
-local batch_size = 64;
+local batch_size = 32;//64;
 local embedding_dim = 300;
-local encoder_hidden_size = 400;
+local encoder_hidden_size = 200;
 
 {
     "dataset_reader": {
@@ -14,7 +14,6 @@ local encoder_hidden_size = 400;
                 "character_tokenizer": {
                     "byte_encoding": "utf-8"
                 },
-                "end_tokens": [" "]
             }
         }
     },
@@ -28,7 +27,7 @@ local encoder_hidden_size = 400;
             "token_embedders": {
                 "tokens": "empty", 
                 "token_characters": {
-                    "type": "character_encoding",
+                    "type": "sentence_character_encoding",
                     "embedding": {
                         "embedding_dim": embedding_dim,
                         "trainable": true
@@ -50,7 +49,7 @@ local encoder_hidden_size = 400;
                 {
                     "type": "feedforward",
                     "feedforward": {
-                        "input_dim": 2 * encoder_hidden_size,
+                        "input_dim": 4 * encoder_hidden_size,
                         "num_layers": 1,
                         "hidden_dims": encoder_hidden_size,
                         "activations": "elu"
