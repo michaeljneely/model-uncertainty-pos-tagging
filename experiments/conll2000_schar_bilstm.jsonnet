@@ -4,7 +4,7 @@ local encoder_hidden_size = 200;
 
 {
     "dataset_reader": {
-        "type": "spaced-conll2000",
+        "type": "conll2000",
         "token_indexers": {
             "tokens": {
                 "type": "single_id"
@@ -12,8 +12,9 @@ local encoder_hidden_size = 200;
             "token_characters": {
                 "type": "characters",
                 "character_tokenizer": {
-                    "byte_encoding": "utf-8"
-                },
+                    "byte_encoding": "utf-8",
+                    "end_tokens": [32]
+                }
             }
         }
     },
