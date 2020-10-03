@@ -681,7 +681,6 @@ class MetaTrainer(Trainer):
         """
         model_state, training_state = self._checkpointer.restore_checkpoint()
 
-        print(training_state)
         if not training_state:
             # No checkpoint to restore, start at 0
             return 0
@@ -763,6 +762,9 @@ class MetaTrainer(Trainer):
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
             model = model.cuda(cuda_device)
+            model.meta_model = model.meta_model.cuda(cuda_device)
+            for name in model.component_models:
+                model.component_models[name] = model.component_models[name].cuda(cuda_device)
 
         if no_grad:
             for name, parameter in model.named_parameters():
@@ -784,7 +786,8 @@ class MetaTrainer(Trainer):
                 name=name,
                 model=sub_model,
                 num_epochs=num_epochs,
-                batches_per_epoch=batches_per_epoch
+                batches_per_epoch=batches_per_epoch,
+                cuda_device=cuda_device
             )
 
         all_parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
