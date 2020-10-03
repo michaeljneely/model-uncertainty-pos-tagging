@@ -9,5 +9,3 @@ class BiFeedForwardEncoder(FeedForwardEncoder):
     @overrides
     def is_bidirectional(self) -> bool:
         return True 
-
-
