@@ -4,7 +4,7 @@ local encoder_hidden_size = 200;
 
 {
     "dataset_reader": {
-        "type": "conll2000",
+        "type": "spaced-conll2000",
         "token_indexers": {
             "tokens": {
                 "type": "single_id"
