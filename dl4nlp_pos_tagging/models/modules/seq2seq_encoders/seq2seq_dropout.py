@@ -26,7 +26,7 @@ class Seq2SeqDropout(Seq2SeqEncoder):
             outputs *= mask.unsqueeze(-1)
 
         return outputs
-        
+
     @overrides
     def get_input_dim(self) -> int:
         return self.input_dim
@@ -37,6 +37,4 @@ class Seq2SeqDropout(Seq2SeqEncoder):
 
     @overrides
     def is_bidirectional(self) -> bool:
-        return self.bidirectional 
-
-
+        return self.bidirectional
