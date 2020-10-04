@@ -127,7 +127,7 @@ class ComponentOptimizer(Registrable):
     def reset_loss(self, key):
         regularization_penalty = self.model.get_regularization_penalty()
         if regularization_penalty is not None:
-            self._loss[key] = ComponentLoss(train_reg_loss=0.0, batch_reg_loss=0.0)
+            self._loss[key] = ComponentLoss(reg_loss=0.0, batch_reg_loss=0.0)
         else:
             self._loss[key] = ComponentLoss()
 
