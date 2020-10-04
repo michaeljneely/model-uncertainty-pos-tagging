@@ -108,3 +108,12 @@ class MetaTagger(Model):
         if metadata is not None:
             output_dict["words"] = [x["words"] for x in metadata]
         return output_dict
+
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+
+        metrics_to_return = {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }
+
+        return metrics_to_return
