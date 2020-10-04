@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import statistics
 import torch
-
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from dl4nlp_pos_tagging.config import Config
 
 InstanceBatch = Tuple[List[int], List[Instance], List[LabelField]]
@@ -42,7 +42,6 @@ class UncertaintyExperiment(Registrable):
         self.predictor = predictor
         self.batch_size = batch_size
         self.logger = logger or logging.getLogger(Config.logger_name)
-        self.field_names = self.predictor._model.get_field_names()
 
         # Dataframe
         self.results = None
@@ -53,14 +52,27 @@ class UncertaintyExperiment(Registrable):
         cls,
         serialization_dir: PathLike,
         test_data_path: PathLike,
+        predictor_type: str,
         batch_size: int,
         cuda_device: Optional[Union[int, torch.device]] = None,
         nr_instances: Optional[int] = 0
     ):
         logger = logging.getLogger(Config.logger_name)
 
+        if cuda_device is None:
+            from torch import cuda
+
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
+
+        check_for_gpu(cuda_device)
+
+
         archive = load_archive(os.path.join(serialization_dir, 'model.tar.gz'), cuda_device=cuda_device)
-        predictor = Predictor.from_archive(archive, archive.config.params['model']['type'])
+
+        predictor = Predictor.from_archive(archive, predictor_type)
 
         test_instances = list(predictor._dataset_reader.read(test_data_path))
 

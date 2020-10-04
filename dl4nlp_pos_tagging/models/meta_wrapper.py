@@ -42,6 +42,7 @@ class MetaWrapper(Model):
             raise ConfigurationError("Reserved name 'meta' cannot be used for a component model.")
 
         self.meta_model = meta_model
+        self.all_model_keys = ["meta"] + list(component_models.keys())
 
     def get_all_models(self):
         meta_model = {"meta": self.meta_model}
@@ -58,7 +59,37 @@ class MetaWrapper(Model):
     @overrides
     def forward(
         self,
+        tokens,
+        metadata,
+        tags:torch.LongTensor = None,
         **kwargs
         ) -> Dict[str, torch.Tensor]:
+
+        output_dict = {}
+        component_args = {}
+
+        for name in self.component_models:
+            component_output = self.component_models[name](
+                tokens=tokens,
+                metadata=metadata,
+                tags=tags
+            )
+            component_args[name] = component_output.pop("output")
+            output_dict[name] = component_output
+
+        meta_output = self.meta_model(
+            tokens=tokens,
+            metadata=metadata,
+            tags=tags,
+            **component_args,
+            **kwargs
+        )
+        output_dict["meta"] = meta_output
+
+        if tags is not None:
+            loss = sum(output_dict[k].pop("loss") for k in self.all_model_keys)
+            output_dict["loss"] = loss
+
+        return output_dict
         # This should only be called if you are using a single optimizer
-        raise NotImplementedError('To be implemented for joint optimization scheme with a single optimizer')
+        # raise NotImplementedError('To be implemented for joint optimization scheme with a single optimizer')
