@@ -124,12 +124,12 @@ class ComponentOptimizer(Registrable):
     def zero_grad(self):
         self._optimizer.zero_grad()
 
-    def reset_loss(self):
+    def reset_loss(self, key):
         regularization_penalty = self.model.get_regularization_penalty()
         if regularization_penalty is not None:
-            self._loss = ComponentLoss(train_reg_loss=0.0, batch_reg_loss=0.0)
+            self._loss[key] = ComponentLoss(reg_loss=0.0, batch_reg_loss=0.0)
         else:
-            self._loss = ComponentLoss()
+            self._loss[key] = ComponentLoss()
 
     def _batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
@@ -493,6 +493,9 @@ class MetaTrainer(Trainer):
             gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
+        for component_optimizer in self.component_optimizers.values():
+            component_optimizer.reset_loss('train')
+
         self.model.train()
 
         # Get tqdm for the training batches
@@ -601,6 +604,9 @@ class MetaTrainer(Trainer):
             )
 
         val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+
+        for component_optimizer in self.component_optimizers.values():
+            component_optimizer.reset_loss('validation')
 
         batches_this_epoch = 0
         done_early = False
