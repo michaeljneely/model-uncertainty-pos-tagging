@@ -1,7 +1,7 @@
 import json
 import os
 from os import PathLike
-from typing import Generator, Iterable
+from typing import Any, Dict, Generator, Iterable
 
 from allennlp.common import JsonDict
 import pandas as pd
@@ -40,3 +40,10 @@ def model_already_trained(
     base_path: PathLike
 ) -> bool:
     return os.path.isfile(os.path.join(base_path, 'model.tar.gz'))
+
+def extend_dictionary_by_namespace(to_extend: [Dict, Any], namespace: str, extend_with: [Dict, Any]):
+    for k, v in extend_with.items():
+        extension_key = f'{namespace}_{k}'
+        if extension_key in to_extend:
+            raise ValueError(f'Dictionary to extend already contains namespaced key {extension_key}')
+        to_extend[extension_key] = v
