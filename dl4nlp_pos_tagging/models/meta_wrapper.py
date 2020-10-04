@@ -38,6 +38,7 @@ class MetaWrapper(Model):
     ):
         super().__init__(vocab)
         self.label_namespace = label_namespace
+        self.num_classes = self.vocab.get_vocab_size(label_namespace)
         self.component_models = component_models
 
         if "meta" in component_models.keys():
