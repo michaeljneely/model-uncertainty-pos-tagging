@@ -131,7 +131,7 @@ local encoder_hidden_size = 400;
                             "input_dim": embedding_dim
                         },
                         {
-                            "type": "stacked_bidirectinoal_lstm",
+                            "type": "stacked_bidirectional_lstm",
                             "input_size": embedding_dim,
                             "hidden_size": encoder_hidden_size,
                             "num_layers": 3,
@@ -175,12 +175,17 @@ local encoder_hidden_size = 400;
                 "type": "compose",
                 "encoders": [
                     {
-                        "type": "lstm",
-                        "bidirectional": true,
-                        "input_size": encoder_hidden_size * 2,
+                        "type": "stacked_bidirectional_lstm",
+                        "input_size": 2 * encoder_hidden_size,
                         "hidden_size": encoder_hidden_size,
                         "num_layers": 1,
-                        "dropout": 0.33
+                        "recurrent_dropout_probability": 0.33,
+                        "layer_dropout_probability": 0.33
+                    },
+                    {
+                        "type": "variational-dropout",
+                        "p": 0.33,
+                        "input_dim": 2 * encoder_hidden_size 
                     },
                     {
                         "type": "bi-feedforward",
