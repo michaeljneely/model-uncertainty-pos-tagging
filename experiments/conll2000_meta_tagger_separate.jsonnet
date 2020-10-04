@@ -194,6 +194,7 @@ local encoder_hidden_size = 400;
     },
     "trainer": {
         "type": "meta",
+        "cuda_device": 0,
         "num_epochs": 40,
         "patience": 5,
         "moving_average": {
