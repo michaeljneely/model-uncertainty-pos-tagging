@@ -21,7 +21,7 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from dl4nlp_pos_tagging.config import Config
 import dl4nlp_pos_tagging.common.utils as utils
 InstanceBatch = Tuple[List[int], List[Instance], List[LabelField]]
-
+import dl4nlp_pos_tagging.common.plotting as plotting
 
 # TODO: Extend skeleton infrastructure
 
@@ -43,12 +43,13 @@ class UncertaintyExperiment(Registrable):
         self.logger = logger or logging.getLogger(Config.logger_name)
 
         # Dataset
+        self.num_instances = len(instances)
         self.dataset = self._batch_dataset(instances)
         self.num_batches = math.ceil(len(instances) / self.batch_size)
 
         # Dataframes
         self.results = None
-
+        plotting.set_styles()
 
     def _batch_dataset(
         self,
@@ -63,16 +64,47 @@ class UncertaintyExperiment(Registrable):
 
             batch_ids = [next(ids) for _ in range(len(instance_batch))]
 
-            labeled_batch = [ \
-                self.predictor.predictions_to_labeled_instances(instance, outputs)[0] \
-                for instance, outputs in zip(instance_batch, batch_outputs) \
-            ]
+            predictions = [self.predictor.predict_instance(instance) for instance in instance_batch]
 
-            yield (batch_ids, labeled_batch, actual_labels)
+            yield (batch_ids, predictions, actual_labels)
 
     def _calculate_uncertainty_batch(self, batch: InstanceBatch, progress_bar: Tqdm = None) -> None:
-        # TODO
-        return
+        uncertainty_df = defaultdict(list)
+        ids, predictions, labels = batch
+        for idx, prediction, label in zip(ids, predictions, labels):
+            for w, word in enumerate(prediction['words']):
+                for model in self.predictor._model.all_model_keys:
+
+                    tag_mean_probability = prediction[f'{model}_class_probabilities'][w]
+                    tag_std_probability  = prediction[f'{model}_class_prob_std'][w]
+                    actual_label_idx = label[w]
+                    predicted_label_idx = np.argmax(tag_mean_probability)
+
+                    uncertainty_df['instance_id'].append(idx)
+                    uncertainty_df['model'].append(model)
+                    uncertainty_df['word'].append(word)
+
+                    uncertainty_df['actual_tag'].append(
+                        self.predictor._model.vocab.get_token_from_index(
+                            actual_label_idx,
+                            namespace=self.predictor._model.label_namespace
+                        )
+                    )
+                    uncertainty_df['actual_confidence_mean'].append(tag_mean_probability[actual_label_idx])
+                    uncertainty_df['actual_confidence_std'].append(tag_std_probability[actual_label_idx])
+
+
+                    uncertainty_df['predicted_tag'].append(
+                        self.predictor._model.vocab.get_token_from_index(
+                            predicted_label_idx,
+                            namespace=self.predictor._model.label_namespace
+                        )
+                    )
+
+                    uncertainty_df['predicted_confidence_mean'].append(tag_mean_probability[predicted_label_idx])
+                    uncertainty_df['predicted_confidence_std'].append(tag_std_probability[predicted_label_idx])
+            progress_bar.update(1)
+        return uncertainty_df
 
     def calculate_uncertainty(self, force: bool = False) -> None:
         pkl_exists = os.path.isfile(os.path.join(self.serialization_dir, 'uncertainty.pkl'))
@@ -84,14 +116,62 @@ class UncertaintyExperiment(Registrable):
             uncertainty_df = defaultdict(list)
             self.logger.info('Calculating uncertainty...')
 
-            progress_bar = Tqdm.tqdm(total=self.num_batches)
+            progress_bar = Tqdm.tqdm(total=self.num_instances)
 
             for batch in self.dataset:
-                # TODO
-                pass
+                uncertainty_scores = self._calculate_uncertainty_batch(batch, progress_bar)
+                for k, v in uncertainty_scores.items():
+                    uncertainty_df[k].extend(v)
 
             self.results = pd.DataFrame(uncertainty_df)
             utils.write_frame(self.results, self.serialization_dir, 'uncertainty')
+
+    def _plot_confusion_matrix_by_model(self):
+        incorrect = self.results.copy()
+        incorrect = incorrect[['predicted_tag', 'actual_tag', 'model']]
+        incorrect['correct'] = (incorrect['predicted_tag'] != incorrect['actual_tag']).astype(int)
+        for model in self.predictor._model.all_model_keys:
+            model_confusion_matrix = incorrect[incorrect['model'] == model]
+            model_confusion_matrix = model_confusion_matrix.pivot_table(
+                index="predicted_tag",
+                columns="actual_tag",
+                values="correct",
+                aggfunc=np.sum
+            )
+            fig, ax = plotting.new_figure()
+            plotting.heatmap(
+                frame=model_confusion_matrix,
+                ax=ax,
+                annotate=True
+            )
+            plotting.annotate(
+                fig=fig,
+                ax=ax,
+                xlabel="Actual Tag",
+                ylabel="Predicted Tag"
+            )
+            plotting.save_figure(self.serialization_dir, f'confusion_matrix_{model}')
+
+    def _plot_confidence_by_tag(self):
+        fig, ax = plotting.new_figure()
+        plotting.grouped_boxplot(
+            x='predicted_tag',
+            y='predicted_prob_mean',
+            hue='model',
+            frame=self.results
+        )
+        plotting.annotate(
+            fig=fig,
+            ax=ax,
+            xlabel='POS tag',
+            ylabel='Average Confidence',
+            title='Model Confidence'
+        )
+        plotting.save_figure(self.serialization_dir, 'confidence_by_model')
+
+    def generate_artifacts(self):
+        self._plot_confidence_by_tag()
+        self._plot_confusion_matrix_by_model()
 
     @classmethod
     def from_partial_objects(
@@ -121,6 +201,9 @@ class UncertaintyExperiment(Registrable):
         predictor = Predictor.from_archive(archive, predictor_type)
 
         test_instances = list(predictor._dataset_reader.read(test_data_path))
+        if nr_instances:
+            logger.info(f'Selecting a random subset of {nr_instances} for interpretation')
+            test_instances = random.sample(test_instances, min(len(test_instances), nr_instances))
 
         return cls(
             serialization_dir=serialization_dir,

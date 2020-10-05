@@ -258,5 +258,10 @@ local encoder_hidden_size = 400;
                 }
             }
         }
-    }
+    },
+    "uncertainty_experiment": {
+        "batch_size": 64,
+        "nr_instances": 10,
+        "predictor_type": "mc_dropout_sentence_tagger"
+    },
 }

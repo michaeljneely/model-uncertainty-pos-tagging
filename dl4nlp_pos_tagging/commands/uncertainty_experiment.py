@@ -147,3 +147,4 @@ def run_uncertainty_experiment(
         serialization_dir=serialization_dir,
     )
     uncertainty_experiment.calculate_uncertainty(force=force)
+    uncertainty_experiment.generate_artifacts()
