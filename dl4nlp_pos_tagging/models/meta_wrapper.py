@@ -59,8 +59,12 @@ class MetaWrapper(Model):
         all_parameters = [m.named_parameters() for m in [self.meta_model] + list(self.component_models.values())]
         return list(itertools.chain.from_iterable(all_parameters))
 
-    def forward(self, *inputs) -> Dict[str, torch.Tensor]:
-        raise NotImplementedError
+    @overrides
+    def forward(
+        self,
+        **kwargs
+        ) -> Dict[str, torch.Tensor]:
+        # This should only be called if you are using a single optimizer
 
         final_output = {}
 
@@ -80,3 +84,4 @@ class MetaWrapper(Model):
             final_output[f'meta_{k}'] = v
 
         return final_output
+
