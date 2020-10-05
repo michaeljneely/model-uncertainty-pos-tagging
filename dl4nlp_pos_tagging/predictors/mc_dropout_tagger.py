@@ -1,20 +1,48 @@
 from overrides import overrides
+from typing import Optional
 
-import torch
-
-from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
-from allennlp.data import Instance, DatasetReader
 from allennlp.common.util import JsonDict, sanitize
+from allennlp.data import DatasetReader, Instance
+from allennlp.data.fields import SequenceLabelField, TextField, FlagField
 from allennlp.models import Model
+from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
+from allennlp.predictors import Predictor
+import torch
+import numpy as np
+from typing import Any, Dict, List, Tuple
+from allennlp.data.dataset_readers.dataset_utils import bio_tags_to_spans
+from collections import defaultdict
 from allennlp.modules import InputVariationalDropout
 
+@Predictor.register("mc_dropout_sentence_tagger")
+class MCDropoutSentenceTaggerPredictor(Predictor):
 
-class MCDropoutSentenceTaggerPredictor(SentenceTaggerPredictor):
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader, nr_samples: int = 64, batch_size: int = 32):
-        super().__init__(model, dataset_reader)
+    def __init__(
+        self,
+        model: Model,
+        dataset_reader: DatasetReader,
+        language: Optional[str] = "en_core_web_sm",
+        nr_samples: Optional[int] = 250,
+        batch_size: Optional[int] = 32
+    ):
+        super().__init__(model, dataset_reader, language)
         self.nr_samples = nr_samples
         self.batch_size = batch_size
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
+
+    def predict(self, sentence: str) -> JsonDict:
+        return self.predict_json({"sentence": sentence})
+
+    @overrides
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
+        """
+        Expects JSON that looks like `{"sentence": "..."}`.
+        Runs the underlying model, and adds the `"words"` to the output.
+        """
+        sentence = json_dict["sentence"]
+        tokens = self._tokenizer.tokenize(sentence)
+        return self._dataset_reader.text_to_instance(tokens)
 
     @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
@@ -63,3 +91,16 @@ class MCDropoutSentenceTaggerPredictor(SentenceTaggerPredictor):
             final_outputs[f'{model_key}_class_prob_std'] = std
 
         return sanitize(final_outputs) 
+
+
+    @overrides
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, np.ndarray]
+    ) -> List[Instance]:
+        new_instance = instance.duplicate()
+        text_field: TextField = instance["tokens"]
+        for name in self._model.all_model_keys:
+            predicted_tags = np.argmax(outputs[f"{name}_class_probabilities"], axis=-1)[:len(text_field)].tolist()
+            new_instance.add_field(f"{name}_tags", SequenceLabelField(predicted_tags, text_field), self._model.vocab)
+
+        return [new_instance]

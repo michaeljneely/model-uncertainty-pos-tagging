@@ -20,7 +20,7 @@ import itertools
 
 logger = logging.getLogger(__name__)
 
-@Model.register("meta_wrapper")
+
 class MetaWrapper(Model):
     """
     A MetaWrapper is a Model which consists of component models and a meta model. The encoded output of each component
@@ -33,15 +33,19 @@ class MetaWrapper(Model):
         self,
         vocab: Vocabulary,
         component_models: Dict[str, Model],
-        meta_model: Model
+        meta_model: Model,
+        label_namespace: str = "labels"
     ):
         super().__init__(vocab)
-        self.component_models = component_models
+        self.label_namespace = label_namespace
+        self.num_classes = self.vocab.get_vocab_size(label_namespace)
+        self.component_models = torch.nn.ModuleDict(component_models)
 
         if "meta" in component_models.keys():
             raise ConfigurationError("Reserved name 'meta' cannot be used for a component model.")
 
         self.meta_model = meta_model
+        self.all_model_keys = ["meta"] + list(component_models.keys())
 
     def get_all_models(self):
         meta_model = {"meta": self.meta_model}
@@ -80,3 +84,4 @@ class MetaWrapper(Model):
             final_output[f'meta_{k}'] = v
 
         return final_output
+

@@ -16,7 +16,8 @@ local encoder_hidden_size = 400;
                     "end_tokens": [32]
                 }
             }
-        }
+        },
+        "max_instances": 64
     },
     "train_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/train.txt"]),
     "test_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/test.txt"]),
@@ -37,22 +38,12 @@ local encoder_hidden_size = 400;
                                 "trainable": true
                             },
                             "encoder": {
-                                "type": "compose",
-                                "encoders": [
-                                    {
-                                        "type": "variational-dropout",
-                                        "p": 0.05,
-                                        "input_dim": embedding_dim,
-                                    },
-                                    {
-                                        "type": "stacked_bidirectional_lstm",
-                                        "input_size": embedding_dim,
-                                        "hidden_size": encoder_hidden_size,
-                                        "num_layers": 3,
-                                        "recurrent_dropout_probability": 0.33,
-                                        "layer_dropout_probability": 0.33
-                                    }
-                                ]   
+                                "type": "lstm",
+                                "bidirectional": true,
+                                "input_size": embedding_dim,
+                                "hidden_size": encoder_hidden_size,
+                                "num_layers": 3,
+                                "dropout": 0.33
                             }
                         }
                     }
@@ -60,12 +51,6 @@ local encoder_hidden_size = 400;
                 "encoder": {
                     "type": "compose",
                     "encoders": [
-                        {
-                            "type": "variational-dropout",
-                            "p": 0.33,
-                            "input_dim": 4 * encoder_hidden_size,
-                            "bidirectional": false 
-                        },
                         {
                             "type": "feedforward",
                             "feedforward": {
@@ -96,7 +81,8 @@ local encoder_hidden_size = 400;
                             }
                         ]
                     ]
-                }
+                },
+                "label_encoding": "BIO"
             },
             "word": {
                 "type": "component_tagger",
@@ -110,13 +96,14 @@ local encoder_hidden_size = 400;
                                     "type": "embedding",
                                     "embedding_dim": embedding_dim,
                                     "trainable": true
-                                },
-                                {
-                                    "type": "embedding",
-                                    "pretrained_file": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
-                                    "embedding_dim": embedding_dim,
-                                    "trainable": false
                                 }
+                                // ,
+                                // {
+                                //     "type": "embedding",
+                                //     "pretrained_file": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
+                                //     "embedding_dim": embedding_dim,
+                                //     "trainable": false
+                                // }
                             ]
                         },
                         "token_characters": "empty"
@@ -131,17 +118,12 @@ local encoder_hidden_size = 400;
                             "input_dim": embedding_dim
                         },
                         {
-                            "type": "stacked_bidirectional_lstm",
+                            "type": "lstm",
+                            "bidirectional": true,
                             "input_size": embedding_dim,
                             "hidden_size": encoder_hidden_size,
                             "num_layers": 3,
-                            "recurrent_dropout_probability": 0.33,
-                            "layer_dropout_probability": 0.33
-                        },
-                        {
-                            "type": "variational-dropout",
-                            "p": 0.33,
-                            "input_dim": 2 * encoder_hidden_size 
+                            "dropout": 0.33
                         },
                         {
                             "type": "bi-feedforward",
@@ -166,7 +148,8 @@ local encoder_hidden_size = 400;
                         ],
                         ["text_field_embedder.token_embedder_tokens.embed_0.weight", "zero"]
                     ]
-                }
+                },
+                "label_encoding": "BIO"
             }
         },
         "meta_model": {
@@ -175,17 +158,12 @@ local encoder_hidden_size = 400;
                 "type": "compose",
                 "encoders": [
                     {
-                        "type": "stacked_bidirectional_lstm",
-                        "input_size": 2 * encoder_hidden_size,
+                        "type": "lstm",
+                        "bidirectional": true,
+                        "input_size": encoder_hidden_size * 2,
                         "hidden_size": encoder_hidden_size,
                         "num_layers": 1,
-                        "recurrent_dropout_probability": 0.33,
-                        "layer_dropout_probability": 0.33
-                    },
-                    {
-                        "type": "variational-dropout",
-                        "p": 0.33,
-                        "input_dim": 2 * encoder_hidden_size 
+                        "dropout": 0.33
                     },
                     {
                         "type": "bi-feedforward",
@@ -209,7 +187,8 @@ local encoder_hidden_size = 400;
                         }
                     ]
                 ],
-            }
+            },
+            "label_encoding": "BIO"
         }
     },
     "data_loader": {
@@ -219,44 +198,24 @@ local encoder_hidden_size = 400;
         }
     },
     "trainer": {
-        "type": "meta",
         "cuda_device": 0,
         "num_epochs": 40,
-        "validation_metric": "+accuracy",
         "patience": 5,
         "moving_average": {
             "type": "exponential",
             "decay": 0.999994
         },
-        "component_optimizers": {
-            "character": {
-                "type": "gradient_descent",
-                "optimizer": {
-                    "type": "adam",
-                    "lr": 2e-3,
-                    "betas": [0.9, 0.999],
-                    "eps": 1e-08,
-                    "amsgrad": true
-                }
-            },
-            "word": {
-                "optimizer": {
-                    "type": "adam",
-                    "lr": 2e-3,
-                    "betas": [0.9, 0.999],
-                    "eps": 1e-08,
-                    "amsgrad": true
-                }
-            },
-            "meta": {
-                "optimizer": {
-                    "type": "adam",
-                    "lr": 2e-3,
-                    "betas": [0.9, 0.999],
-                    "eps": 1e-08,
-                    "amsgrad": true
-                }
-            }
+        "optimizer": {
+            "type": "adam",
+            "lr": 2e-3,
+            "betas": [0.9, 0.999],
+            "eps": 1e-08,
+            "amsgrad": true
         }
-    }
+    },
+    "uncertainty_experiment": {
+        "batch_size": 10,
+        "nr_instances": 10,
+        "predictor_type": "mc_dropout_sentence_tagger"
+    },
 }
