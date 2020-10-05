@@ -45,13 +45,13 @@ class MCDropoutSentenceTaggerPredictor(SentenceTaggerPredictor):
 
         # calculate mean and variance
         mean = all_class_probs.mean(dim=0)
-        variance = all_class_probs.var(dim=0)
+        std = all_class_probs.std(dim=0)
+        
 
         outputs = {
             'class_probabilities': mean,
-            'class_confidences': variance,
-            'words': all_outputs[0]['words'],
-            'tags': all_outputs[0]['tags']
+            'class_prob_std': std,
+            'words': all_outputs[0]['words']
         }
 
         return sanitize(outputs) 

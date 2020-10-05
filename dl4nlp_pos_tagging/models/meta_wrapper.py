@@ -61,4 +61,22 @@ class MetaWrapper(Model):
         **kwargs
         ) -> Dict[str, torch.Tensor]:
         # This should only be called if you are using a single optimizer
-        raise NotImplementedError('To be implemented for joint optimization scheme with a single optimizer')
+
+        final_output = {}
+
+        component_outputs = []
+        for key,component in self.component_models.items():
+            output = component(**kwargs)
+
+            for k,v in output.items():
+                final_output[f'{key}_{k}'] = v
+
+            component_outputs.append(output['output'])
+
+        tokens = kwargs.pop('tokens')
+        output = self.meta_model(tokens, *component_outputs, **kwargs)
+
+        for k,v in output.items():
+            final_output[f'meta_{k}'] = v
+
+        return output #final_output
