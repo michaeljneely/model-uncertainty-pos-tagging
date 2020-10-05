@@ -142,7 +142,7 @@ class UncertaintyExperiment(Registrable):
             plotting.heatmap(
                 frame=model_confusion_matrix,
                 ax=ax,
-                annotate=True
+                annot=True
             )
             plotting.annotate(
                 fig=fig,
