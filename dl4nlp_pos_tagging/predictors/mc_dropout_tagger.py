@@ -33,10 +33,13 @@ class MCDropoutSentenceTaggerPredictor(Predictor):
     @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
 
+        sub_models = self._model.get_all_models()
+
         # turn on dropout
-        for module in self._model.modules():
-            if isinstance(module, InputVariationalDropout):
-                module.train()
+        for model in sub_models.values():
+            for module in model.modules():
+                if isinstance(module, InputVariationalDropout):
+                    module.train()
 
         # forward `nr_samples` amount of times in batches
         all_outputs = []
@@ -49,36 +52,28 @@ class MCDropoutSentenceTaggerPredictor(Predictor):
             batch = [instance] * batch_size
             outputs = self._model.forward_on_instances(batch)
             all_outputs.extend(outputs)
-      
-        # collect class probabilities
-        all_class_probs = []
-        for outputs in all_outputs:
-            tensor = torch.from_numpy(outputs['class_probabilities'])
-            all_class_probs.append(tensor)
-        all_class_probs = torch.stack(all_class_probs)
+     
 
-        # calculate mean and variance
-        mean = all_class_probs.mean(dim=0)
-        std = all_class_probs.std(dim=0)
-        
-
-        outputs = {
-            'class_probabilities': mean,
-            'class_prob_std': std,
-            'words': all_outputs[0]['words']
+        final_outputs = {
+            'words': all_outputs[0]['meta_words']
         }
 
-        return sanitize(outputs) 
+        for model_key in sub_models.keys():
 
+            # collect class probabilities
+            all_class_probs = []
+            for outputs in all_outputs:
+                tensor = torch.from_numpy(outputs[f'{model_key}_class_probabilities'])
+                all_class_probs.append(tensor)
+            all_class_probs = torch.stack(all_class_probs)
 
-    @overrides
-    def predictions_to_labeled_instances(
-        self, instance: Instance, outputs: Dict[str, np.ndarray]
-    ) -> List[Instance]:
-        new_instance = instance.duplicate()
-        text_field: TextField = instance["tokens"]
-        for name in self._model.all_model_keys:
-            predicted_tags = np.argmax(outputs[f"{name}_class_probabilities"], axis=-1)[:len(text_field)].tolist()
-            new_instance.add_field(f"{name}_tags", SequenceLabelField(predicted_tags, text_field), self._model.vocab)
+            print(all_class_probs.shape)
 
-        return [new_instance]
+            # calculate mean and variance
+            mean = all_class_probs.mean(dim=0)
+            std = all_class_probs.std(dim=0)
+
+            final_outputs[f'{model_key}_class_probabilities'] = mean
+            final_outputs[f'{model_key}_class_prob_std'] = std
+
+        return sanitize(final_outputs) 
