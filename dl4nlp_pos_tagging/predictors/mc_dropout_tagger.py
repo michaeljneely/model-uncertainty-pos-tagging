@@ -1,6 +1,7 @@
 from overrides import overrides
 from typing import Optional
 
+from allennlp.common import JsonDict
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import SequenceLabelField, TextField, FlagField
 from allennlp.models import Model
