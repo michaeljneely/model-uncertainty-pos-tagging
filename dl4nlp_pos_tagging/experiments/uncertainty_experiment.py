@@ -156,7 +156,7 @@ class UncertaintyExperiment(Registrable):
         fig, ax = plotting.new_figure()
         plotting.grouped_boxplot(
             x='predicted_tag',
-            y='predicted_prob_mean',
+            y='predicted_confidence_mean',
             hue='model',
             frame=self.results
         )
