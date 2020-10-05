@@ -23,7 +23,7 @@ local encoder_hidden_size = 400;
     "validation_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/dev.txt"]),
     "evaluate_on_test": true,
     "model": {
-        "type": "meta_wrapper",
+        "type": "meta_tagger_wrapper",
         "component_models": {
             "character": {
                 "type": "component_tagger",
