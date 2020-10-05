@@ -22,7 +22,8 @@ class MCDropoutSentenceTaggerPredictor(Predictor):
         model: Model,
         dataset_reader: DatasetReader,
         language: Optional[str] = "en_core_web_sm",
-        nr_samples: Optional[int] = 250
+        nr_samples: Optional[int] = 250,
+        batch_size: Optional[int] = 32
     ):
         super().__init__(model, dataset_reader, language)
         self.nr_samples = nr_samples
