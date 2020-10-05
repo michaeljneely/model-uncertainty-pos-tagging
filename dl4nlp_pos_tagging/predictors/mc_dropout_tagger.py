@@ -1,5 +1,9 @@
 from overrides import overrides
-from typing import Optional
+from collections import defaultdict
+from typing import Any, Dict, List, Tuple, Optional
+
+import torch
+import numpy as np
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -7,11 +11,9 @@ from allennlp.data.fields import SequenceLabelField, TextField, FlagField
 from allennlp.models import Model
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
 from allennlp.predictors import Predictor
-import torch
-import numpy as np
-from typing import Any, Dict, List, Tuple
 from allennlp.data.dataset_readers.dataset_utils import bio_tags_to_spans
-from collections import defaultdict
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
+
 from allennlp.modules import InputVariationalDropout
 
 @Predictor.register("mc_dropout_sentence_tagger")
@@ -80,8 +82,6 @@ class MCDropoutSentenceTaggerPredictor(Predictor):
                 tensor = torch.from_numpy(outputs[f'{model_key}_class_probabilities'])
                 all_class_probs.append(tensor)
             all_class_probs = torch.stack(all_class_probs)
-
-            print(all_class_probs.shape)
 
             # calculate mean and variance
             mean = all_class_probs.mean(dim=0)
