@@ -61,22 +61,3 @@ class MetaWrapper(Model):
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:
         raise NotImplementedError
-
-        final_output = {}
-
-        component_outputs = []
-        for key,component in self.component_models.items():
-            output = component(**kwargs)
-
-            for k,v in output.items():
-                final_output[f'{key}_{k}'] = v
-
-            component_outputs.append(output['output'])
-
-        tokens = kwargs.pop('tokens')
-        output = self.meta_model(tokens, *component_outputs, **kwargs)
-
-        for k,v in output.items():
-            final_output[f'meta_{k}'] = v
-
-        return output #final_output
