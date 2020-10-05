@@ -39,7 +39,7 @@ class MetaWrapper(Model):
         super().__init__(vocab)
         self.label_namespace = label_namespace
         self.num_classes = self.vocab.get_vocab_size(label_namespace)
-        self.component_models = component_models
+        self.component_models = torch.nn.ModuleDict(component_models)
 
         if "meta" in component_models.keys():
             raise ConfigurationError("Reserved name 'meta' cannot be used for a component model.")
