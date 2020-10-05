@@ -1,6 +1,6 @@
 local batch_size = 32;
 local embedding_dim = 300;
-local encoder_hidden_size = 200;
+local encoder_hidden_size = 400;
 
 {
     "dataset_reader": {
@@ -34,12 +34,22 @@ local encoder_hidden_size = 200;
                         "trainable": true
                     },
                     "encoder": {
-                        "type": "stacked_bidirectional_lstm",
-                        "input_size": embedding_dim,
-                        "hidden_size": encoder_hidden_size,
-                        "num_layers": 3,
-                        "recurrent_dropout_probability": 0.33,
-                        "layer_dropout_probability": 0.33
+                        "type": "compose",
+                        "encoders": [
+                            {
+                                "type": "variational-dropout",
+                                "p": 0.05,
+                                "input_dim": embedding_dim,
+                            },
+                            {
+                                "type": "stacked_bidirectional_lstm",
+                                "input_size": embedding_dim,
+                                "hidden_size": encoder_hidden_size,
+                                "num_layers": 3,
+                                "recurrent_dropout_probability": 0.33,
+                                "layer_dropout_probability": 0.33
+                            }
+                        ]   
                     }
                 }
             }
@@ -47,7 +57,12 @@ local encoder_hidden_size = 200;
         "encoder": {
             "type": "compose",
             "encoders": [
-                
+                {
+                    "type": "variational-dropout",
+                    "p": 0.33,
+                    "input_dim": 4 * encoder_hidden_size,
+                    "bidirectional": false 
+                },
                 {
                     "type": "feedforward",
                     "feedforward": {
