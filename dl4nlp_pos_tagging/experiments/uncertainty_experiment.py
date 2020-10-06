@@ -85,7 +85,6 @@ class UncertaintyExperiment(Registrable):
 
                     uncertainty_df['instance_id'].append(idx)
                     uncertainty_df['model'].append(model)
-                    uncertainty_df['word_id'].append(w)
                     uncertainty_df['word'].append(word)
 
                     uncertainty_df['actual_tag'].append(
@@ -134,6 +133,7 @@ class UncertaintyExperiment(Registrable):
         incorrect = self.results.copy()
         incorrect = incorrect[['predicted_tag', 'actual_tag', 'model']]
         incorrect['correct'] = (incorrect['predicted_tag'] != incorrect['actual_tag']).astype(int)
+        incorrect = incorrect[incorrect['predicted_tag'].map(lambda x: len(x) > 1 and x[0].isalpha())]
         for model in self.predictor._model.all_model_keys:
             model_confusion_matrix = incorrect[incorrect['model'] == model]
             model_confusion_matrix = model_confusion_matrix.pivot_table(
@@ -200,9 +200,9 @@ class UncertaintyExperiment(Registrable):
             return mu, sigma
 
         line_string = (
-            r"!!TAG!!  & \multicolumn{1}{c|}{!!MU_CHARACTER!!$\pm$!!SIGMA_CHARACTER!!} "\
-            r"& \multicolumn{1}{c|}{!!MU_WORD!!$\pm$!!SIGMA_WORD!!} "\
-            r"& !!MU_META!!$\pm$!!SIGMA_META!!\\ \hline"\
+            r"!!TAG!!  & \multicolumn{1}{c|}{!!MU_CHARACTER!!} "\
+            r"& \multicolumn{1}{c|}{!!MU_WORD!!} "\
+            r"& !!MU_META!!\\ \hline"\
         )
         for tag, confidence_dict in confidence_by_tag.items():
             if not tag[0].isalpha():
@@ -230,10 +230,17 @@ class UncertaintyExperiment(Registrable):
             for line in table_string:
                 handle.write(line + '\n')
 
+    def _announce_accuracy(self):
+        accuracy = self.results.copy()
+        accuracy['accuracy'] = accuracy['predicted_tag'] == accuracy['actual_tag']
+        accuracy = accuracy[['model', 'accuracy']].groupby('model').mean()
+        print(accuracy)
+
     def generate_artifacts(self):
         self._plot_confidence_by_tag()
         self._plot_confusion_matrix_by_model()
         self._latex_table_confidence_by_tags()
+        self._announce_table_accuracy()
 
     @classmethod
     def from_partial_objects(
