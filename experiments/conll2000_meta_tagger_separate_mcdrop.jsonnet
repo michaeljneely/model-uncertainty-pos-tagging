@@ -17,6 +17,8 @@ local encoder_hidden_size = 400;
                 }
             }
         }
+        },
+        "tag_label": "pos"
     },
     "train_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/train.txt"]),
     "test_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/test.txt"]),

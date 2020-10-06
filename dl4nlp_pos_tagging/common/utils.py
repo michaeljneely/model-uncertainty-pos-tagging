@@ -47,3 +47,11 @@ def extend_dictionary_by_namespace(to_extend: [Dict, Any], namespace: str, exten
         if extension_key in to_extend:
             raise ValueError(f'Dictionary to extend already contains namespaced key {extension_key}')
         to_extend[extension_key] = v
+
+def strip_preceding_decimal_zero(dec):
+    dec_str = str(dec) if not isinstance(dec, str) else dec
+    if dec_str[0] == '-':
+        dec_str = dec_str[0] + dec_str[2:]
+    else:
+        dec_str = dec_str[1:]
+    return dec_str
