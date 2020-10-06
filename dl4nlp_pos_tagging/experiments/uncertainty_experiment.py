@@ -158,34 +158,6 @@ class UncertaintyExperiment(Registrable):
         plt.ylabel("Meta Model Uncertainty")
         plotting.save_figure(self.serialization_dir, f'uncertainty_by_disagreement_b')
 
-
-    def _plot_confusion_matrix_by_model(self):
-        incorrect = self.results.copy()
-        incorrect = incorrect[['predicted_tag', 'actual_tag', 'model']]
-        incorrect['correct'] = (incorrect['predicted_tag'] != incorrect['actual_tag']).astype(int)
-        incorrect = incorrect[incorrect['predicted_tag'].map(lambda x: len(x) > 1 and x[0].isalpha())]
-        for model in self.predictor._model.all_model_keys:
-            model_confusion_matrix = incorrect[incorrect['model'] == model]
-            model_confusion_matrix = model_confusion_matrix.pivot_table(
-                index="actual_tag",
-                columns="actual_tag",
-                values="correct",
-                aggfunc=np.sum
-            )
-            fig, ax = plotting.new_figure()
-            plotting.heatmap(
-                frame=model_confusion_matrix,
-                ax=ax,
-                annot=True
-            )
-            plotting.annotate(
-                fig=fig,
-                ax=ax,
-                xlabel="Actual Tag",
-                ylabel="Predicted Tag"
-            )
-            plotting.save_figure(self.serialization_dir, f'confusion_matrix_{model}')
-
     def _plot_confidence_by_tag(self):
         fig, ax = plotting.new_figure()
         plotting.grouped_boxplot(
@@ -267,9 +239,9 @@ class UncertaintyExperiment(Registrable):
         print(accuracy)
 
     def generate_artifacts(self):
-        # self._plot_confidence_by_tag()
-        # self._plot_confusion_matrix_by_model()
-        # self._latex_table_confidence_by_tags()
+        self._plot_confidence_by_tag()
+        self._latex_table_confidence_by_tags()
+        self._report_meta_disagreement()
         self._announce_accuracy()
         self._plot_uncertainty_by_disagreement()
 
