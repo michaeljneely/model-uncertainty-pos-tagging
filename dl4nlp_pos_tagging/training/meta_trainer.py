@@ -1,4 +1,7 @@
 from allennlp.training import Trainer, GradientDescentTrainer, BatchCallback, EpochCallback
+# Authors Note: Significant chunks of code are taken directly from AllenNLP
+# This is because we need to modify the Trainer class to work for Meta models
+
 from allennlp.models import Model
 from typing import List, Optional, Dict, Tuple, Any, Union, Iterator, Generator
 from allennlp.data import DataLoader

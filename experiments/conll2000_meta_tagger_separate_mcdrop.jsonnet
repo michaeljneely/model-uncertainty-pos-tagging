@@ -16,14 +16,15 @@ local encoder_hidden_size = 400;
                     "end_tokens": [32]
                 }
             }
-        }
+        },
+        "tag_label": "pos"
     },
     "train_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/train.txt"]),
     "test_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/test.txt"]),
     "validation_data_path": std.join("/", [std.extVar("PWD"), "datasets/conll2000/dev.txt"]),
     "evaluate_on_test": true,
     "model": {
-        "type": "meta_wrapper",
+        "type": "meta_tagger_wrapper",
         "component_models": {
             "character": {
                 "type": "component_tagger",
@@ -37,12 +38,22 @@ local encoder_hidden_size = 400;
                                 "trainable": true
                             },
                             "encoder": {
-                                "type": "lstm",
-                                "bidirectional": true,
-                                "input_size": embedding_dim,
-                                "hidden_size": encoder_hidden_size,
-                                "num_layers": 3,
-                                "dropout": 0.33
+                                "type": "compose",
+                                "encoders": [
+                                    {
+                                        "type": "variational-dropout",
+                                        "p": 0.05,
+                                        "input_dim": embedding_dim,
+                                    },
+                                    {
+                                        "type": "stacked_bidirectional_lstm",
+                                        "input_size": embedding_dim,
+                                        "hidden_size": encoder_hidden_size,
+                                        "num_layers": 3,
+                                        "recurrent_dropout_probability": 0.33,
+                                        "layer_dropout_probability": 0.33
+                                    }
+                                ]   
                             }
                         }
                     }
@@ -50,6 +61,12 @@ local encoder_hidden_size = 400;
                 "encoder": {
                     "type": "compose",
                     "encoders": [
+                        {
+                            "type": "variational-dropout",
+                            "p": 0.33,
+                            "input_dim": 4 * encoder_hidden_size,
+                            "bidirectional": false 
+                        },
                         {
                             "type": "feedforward",
                             "feedforward": {
@@ -110,17 +127,22 @@ local encoder_hidden_size = 400;
                     "type": "compose",
                     "encoders": [
                         {
-                            "type": "dropout",
+                            "type": "variational-dropout",
                             "p": 0.33,
                             "input_dim": embedding_dim
                         },
                         {
-                            "type": "lstm",
-                            "bidirectional": true,
+                            "type": "stacked_bidirectional_lstm",
                             "input_size": embedding_dim,
                             "hidden_size": encoder_hidden_size,
                             "num_layers": 3,
-                            "dropout": 0.33
+                            "recurrent_dropout_probability": 0.33,
+                            "layer_dropout_probability": 0.33
+                        },
+                        {
+                            "type": "variational-dropout",
+                            "p": 0.33,
+                            "input_dim": 2 * encoder_hidden_size 
                         },
                         {
                             "type": "bi-feedforward",
@@ -154,12 +176,17 @@ local encoder_hidden_size = 400;
                 "type": "compose",
                 "encoders": [
                     {
-                        "type": "lstm",
-                        "bidirectional": true,
-                        "input_size": encoder_hidden_size * 2,
+                        "type": "stacked_bidirectional_lstm",
+                        "input_size": 2 * encoder_hidden_size,
                         "hidden_size": encoder_hidden_size,
                         "num_layers": 1,
-                        "dropout": 0.33
+                        "recurrent_dropout_probability": 0.33,
+                        "layer_dropout_probability": 0.33
+                    },
+                    {
+                        "type": "variational-dropout",
+                        "p": 0.33,
+                        "input_dim": 2 * encoder_hidden_size 
                     },
                     {
                         "type": "bi-feedforward",
@@ -196,6 +223,7 @@ local encoder_hidden_size = 400;
         "type": "meta",
         "cuda_device": 0,
         "num_epochs": 40,
+        "validation_metric": "+accuracy",
         "patience": 5,
         "moving_average": {
             "type": "exponential",
@@ -231,5 +259,10 @@ local encoder_hidden_size = 400;
                 }
             }
         }
-    }
+    },
+    "uncertainty_experiment": {
+        "batch_size": 64,
+        "nr_inference_samples": 64,
+        "predictor_type": "mc_dropout_sentence_tagger"
+    },
 }

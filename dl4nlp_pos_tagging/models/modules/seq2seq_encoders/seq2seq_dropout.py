@@ -5,7 +5,7 @@ from overrides import overrides
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 
-@Seq2SeqEncoder.register("dropout")
+@Seq2SeqEncoder.register("variational-dropout")
 class Seq2SeqDropout(Seq2SeqEncoder):
 
     def __init__(self, p: float, input_dim: int, bidirectional: bool = True):
