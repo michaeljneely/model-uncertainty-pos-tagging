@@ -44,7 +44,7 @@ REQUIRED = [
   'scipy',
   'seaborn',
   'gensim',
-  'spacy==2.1.9',
+  'spacy==2.2.2',
   'matplotlib',
   'ipython'
 ]
