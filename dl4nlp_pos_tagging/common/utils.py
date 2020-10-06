@@ -1,3 +1,4 @@
+import collections
 import json
 import os
 from os import PathLike
@@ -55,3 +56,19 @@ def strip_preceding_decimal_zero(dec):
     else:
         dec_str = dec_str[1:]
     return dec_str
+
+def count_tags(file_path):
+    file = open(file_path, "r")
+    lines = file.readlines()
+    
+    tag_counts = {}
+    
+    for line in lines:
+        if line != "\n":
+            [_, pos, _] = line.strip().split()
+            if pos in tag_counts:
+                tag_counts[pos] += 1
+            else: 
+                tag_counts[pos] = 1
+    
+    return collections.OrderedDict(sorted(tag_counts.items()))
