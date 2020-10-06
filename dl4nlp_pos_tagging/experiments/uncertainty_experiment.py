@@ -173,13 +173,6 @@ class UncertaintyExperiment(Registrable):
         )
         plotting.save_figure(self.serialization_dir, 'confidence_by_model')
 
-    def _meta_less_confident(self):
-        # less_confident = self.results.groupby()
-        # less_confident = less_confident[
-        #     less_confident['predicted_confidence_mean']
-        # ]
-        lc = self.results[self.results['model'] == 'meta']['predic']
-
     def _latex_table_confidence_by_tags(self):
         table_string = [
             r"\small{\begin{table}[h!]",
@@ -195,7 +188,7 @@ class UncertaintyExperiment(Registrable):
         })
         confidence_frame.columns = confidence_frame.columns.droplevel()
 
-        confidence_frame.columns = ['index', 'model', 'predicted_tag' 'mean_uncertainty', 'std_uncertainty']
+        confidence_frame.columns = ['model', 'predicted_tag', 'mean_uncertainty', 'std_uncertainty']
 
         for row in confidence_frame.itertuples(index=False):
             model, predicted_tag, mu, sigma = row
@@ -212,6 +205,9 @@ class UncertaintyExperiment(Registrable):
             r"& !!MU_META!!$\pm$!!SIGMA_META!!\\ \hline"\
         )
         for tag, confidence_dict in confidence_by_tag.items():
+            if not tag[0].isalpha():
+                continue
+            tag = tag.replace("$", "\$")
             new_line = copy(line_string)
             zipped = []
             for model in self.predictor._model.all_model_keys:
@@ -234,24 +230,10 @@ class UncertaintyExperiment(Registrable):
             for line in table_string:
                 handle.write(line + '\n')
 
-    def _multiple_sense(self):
-        ms = self.results.copy()
-        ms = ms.groupby(['word', 'model']).aggregate({
-            'actual_tag': set,
-            'predicted_confidence_std': 'mean'
-        })
-        ms = ms.loc[np.array(list(map(len,ms.actual_tag.values)))>1]
-        print(ms)
-        # })].apply(set).reset_index()
-        # ms = ms.loc[np.array(list(map(len,ms.actual_tag.values)))>1]
-        # print(ms)
-
     def generate_artifacts(self):
         self._plot_confidence_by_tag()
         self._plot_confusion_matrix_by_model()
-        # self._multiple_sense()
         self._latex_table_confidence_by_tags()
-        # self._meta_less_confident()
 
     @classmethod
     def from_partial_objects(
