@@ -1,6 +1,7 @@
 from collections import defaultdict
 from copy import copy
 import itertools
+from functools import partial
 import logging
 import math
 import os
@@ -16,14 +17,16 @@ from allennlp.data.fields import TextField, LabelField
 from allennlp.interpret import SaliencyInterpreter
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.spatial import distance
+from scipy import stats
 import torch
 
 from dl4nlp_pos_tagging.config import Config
 import dl4nlp_pos_tagging.common.utils as utils
 import dl4nlp_pos_tagging.common.plotting as plotting
-
 
 InstanceBatch = Tuple[List[int], List[Instance], List[LabelField]]
 
@@ -52,7 +55,7 @@ class UncertaintyExperiment(Registrable):
 
         # Dataframes
         self.results = None
-        plotting.set_styles()
+        # plotting.set_styles()
 
     def _batch_dataset(
         self,
@@ -131,6 +134,30 @@ class UncertaintyExperiment(Registrable):
 
             self.results = pd.DataFrame(uncertainty_df)
             utils.write_frame(self.results, self.serialization_dir, 'uncertainty')
+
+    def _plot_uncertainty_by_disagreement(self):
+        df = self.results.copy()
+        char_mask = df['model'].values == 'character'
+        word_mask = df['model'].values == 'word'
+        meta_mask = df['model'].values == 'meta'
+        char_df = df[char_mask]
+        word_df = df[word_mask]
+        meta_df = df[meta_mask]
+        meta_df['dist'] = list(map(partial(distance.jensenshannon, base=2.0), char_df['mean_probability_distribution'], word_df['mean_probability_distribution']))
+        corr = stats.pearsonr(meta_df['dist'], meta_df['predicted_confidence_std'])
+        print(f'Corelation between JS Divergence of char/word models and the meta model\'s uncertainty is: {corr}')
+        fig, ax = plotting.new_figure()
+        plotting.displot(
+            meta_df,
+            x="dist",
+            y="predicted_confidence_std",
+            kind="kde",
+            fill=True,
+        )
+        plt.xlabel("JS Divergence of Character and Word Model Predictive Distributions")
+        plt.ylabel("Meta Model Uncertainty")
+        plotting.save_figure(self.serialization_dir, f'uncertainty_by_disagreement_b')
+
 
     def _plot_confusion_matrix_by_model(self):
         incorrect = self.results.copy()
@@ -244,6 +271,7 @@ class UncertaintyExperiment(Registrable):
         # self._plot_confusion_matrix_by_model()
         # self._latex_table_confidence_by_tags()
         self._announce_accuracy()
+        self._plot_uncertainty_by_disagreement()
 
     @classmethod
     def from_partial_objects(

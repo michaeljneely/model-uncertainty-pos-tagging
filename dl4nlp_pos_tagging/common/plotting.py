@@ -21,7 +21,7 @@ def set_styles(mpl_style: str = Config.mpl_style, sns_palette: str = Config.sns_
     sns.set_palette(sns.color_palette(sns_palette))
 
 def save_figure(dirname, filename):
-    plt.savefig(os.path.join(dirname, filename + '.png'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(dirname, filename + '.png'), bbox_inches='tight', dpi=500)
     # plt.savefig(os.path.join(dirname, filename + '.svg'), bbox_inches='tight')
 
 def new_figure(**kwargs):
@@ -76,4 +76,36 @@ def heatmap(frame, ax, **kwargs):
         frame,
         ax=ax,
         **kwargs
+    )
+
+def regplot(frame, x, y, **kwargs):
+    sns.regplot(
+        x=x,
+        y=y,
+        data=frame,
+        **kwargs
+    )
+
+def displot(frame, x, y, **kwargs):
+    sns.displot(
+        frame,
+        x=x,
+        y=y,
+        **kwargs
+    )
+
+def kdeplot(frame, x, y, **kwargs):
+    sns.kdeplot(
+        data=frame,
+        x=x,
+        y=y,
+        **kwargs
+    )
+
+def jointplot(frame, x, y, **kwargs):
+    sns.jointplot(
+      x=x,
+      y=y,
+      data=frame,
+      **kwargs
     )
