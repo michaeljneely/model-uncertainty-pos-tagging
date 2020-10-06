@@ -112,12 +112,12 @@ local encoder_hidden_size = 400;
                                     "embedding_dim": embedding_dim,
                                     "trainable": true
                                 },
-                                // {
-                                //     "type": "embedding",
-                                //     "pretrained_file": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
-                                //     "embedding_dim": embedding_dim,
-                                //     "trainable": false
-                                // }
+                                {
+                                    "type": "embedding",
+                                    "pretrained_file": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
+                                    "embedding_dim": embedding_dim,
+                                    "trainable": false
+                                }
                             ]
                         },
                         "token_characters": "empty"
@@ -221,8 +221,8 @@ local encoder_hidden_size = 400;
     },
     "trainer": {
         "type": "meta",
-        "cuda_device": -1,
-        "num_epochs": 1,
+        "cuda_device": 0,
+        "num_epochs": 40,
         "validation_metric": "+accuracy",
         "patience": 5,
         "moving_average": {
