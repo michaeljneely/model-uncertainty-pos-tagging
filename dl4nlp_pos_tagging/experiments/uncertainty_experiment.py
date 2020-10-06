@@ -1,13 +1,16 @@
 from collections import defaultdict
+from copy import copy
 import itertools
 import logging
 import math
 import os
 import random
 from os import PathLike
+import statistics
 from typing import Any, Dict, List, Generator, Optional, Tuple, Union
 
 from allennlp.common import Lazy, Registrable, Tqdm
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import Instance
 from allennlp.data.fields import TextField, LabelField
 from allennlp.interpret import SaliencyInterpreter
@@ -15,15 +18,15 @@ from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 import numpy as np
 import pandas as pd
-import statistics
 import torch
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+
 from dl4nlp_pos_tagging.config import Config
 import dl4nlp_pos_tagging.common.utils as utils
-InstanceBatch = Tuple[List[int], List[Instance], List[LabelField]]
 import dl4nlp_pos_tagging.common.plotting as plotting
 
-# TODO: Extend skeleton infrastructure
+
+InstanceBatch = Tuple[List[int], List[Instance], List[LabelField]]
+
 
 class UncertaintyExperiment(Registrable):
 
@@ -82,6 +85,7 @@ class UncertaintyExperiment(Registrable):
 
                     uncertainty_df['instance_id'].append(idx)
                     uncertainty_df['model'].append(model)
+                    uncertainty_df['word_id'].append(w)
                     uncertainty_df['word'].append(word)
 
                     uncertainty_df['actual_tag'].append(
@@ -169,9 +173,85 @@ class UncertaintyExperiment(Registrable):
         )
         plotting.save_figure(self.serialization_dir, 'confidence_by_model')
 
+    def _meta_less_confident(self):
+        # less_confident = self.results.groupby()
+        # less_confident = less_confident[
+        #     less_confident['predicted_confidence_mean']
+        # ]
+        lc = self.results[self.results['model'] == 'meta']['predic']
+
+    def _latex_table_confidence_by_tags(self):
+        table_string = [
+            r"\small{\begin{table}[h!]",
+            r"\centering",
+            r"\begin{tabular}{|l|llc|}",
+            r"\hline"
+            r"&                       &      \textbf{Model}                 &  \\ \cline{2-4} ",
+            r"\textbf{Tag}& \multicolumn{1}{l|}{\textbf{Char}} & \multicolumn{1}{l|}{\textbf{Word}} &  \textbf{Meta}\\ \hline\hline"
+        ]
+        confidence_by_tag = {k: {} for k in self.predictor._model.vocab._token_to_index[self.predictor._model.label_namespace].keys()}
+        confidence_frame = self.results.groupby(['model', 'predicted_tag'], as_index=False).aggregate({
+            'predicted_confidence_std': ['mean', 'std']
+        })
+        confidence_frame.columns = confidence_frame.columns.droplevel()
+
+        confidence_frame.columns = ['index', 'model', 'predicted_tag' 'mean_uncertainty', 'std_uncertainty']
+
+        for row in confidence_frame.itertuples(index=False):
+            model, predicted_tag, mu, sigma = row
+            confidence_by_tag[predicted_tag][model] = (mu, sigma)
+
+        def _format_tuple(mu, sigma):
+            mu, sigma = round(mu, 4), round(sigma, 4)
+            mu, sigma = utils.strip_preceding_decimal_zero(mu), utils.strip_preceding_decimal_zero(sigma)
+            return mu, sigma
+
+        line_string = (
+            r"!!TAG!!  & \multicolumn{1}{c|}{!!MU_CHARACTER!!$\pm$!!SIGMA_CHARACTER!!} "\
+            r"& \multicolumn{1}{c|}{!!MU_WORD!!$\pm$!!SIGMA_WORD!!} "\
+            r"& !!MU_META!!$\pm$!!SIGMA_META!!\\ \hline"\
+        )
+        for tag, confidence_dict in confidence_by_tag.items():
+            new_line = copy(line_string)
+            zipped = []
+            for model in self.predictor._model.all_model_keys:
+                mu, sigma = confidence_dict.get(model, ("N/A", "N/A"))
+                if mu != "N/A":
+                    mu, sigma = _format_tuple(mu, sigma)
+                zipped.append((mu, f"!!MU_{model.upper()}!!", sigma, f"!!SIGMA_{model.upper()}!!"))
+            for (mu, mu_label, sigma, sigma_label) in zipped:
+                 new_line = new_line.replace(mu_label, mu)
+                 new_line = new_line.replace(sigma_label, sigma)
+            new_line = new_line.replace('!!TAG!!', tag)
+            table_string.append(new_line)
+        table_string.extend([
+            r"\end{tabular}",
+            r"\caption{Mean confidence scores with standard deviation of the character, word and meta model per part-of-speech tag.}",
+            r"\label{tab:confidence-per-tag}",
+            r"\end{table}}",
+        ])
+        with open(os.path.join(self.serialization_dir, 'tag_confidence_by_model.tex'), 'w+') as handle:
+            for line in table_string:
+                handle.write(line + '\n')
+
+    def _multiple_sense(self):
+        ms = self.results.copy()
+        ms = ms.groupby(['word', 'model']).aggregate({
+            'actual_tag': set,
+            'predicted_confidence_std': 'mean'
+        })
+        ms = ms.loc[np.array(list(map(len,ms.actual_tag.values)))>1]
+        print(ms)
+        # })].apply(set).reset_index()
+        # ms = ms.loc[np.array(list(map(len,ms.actual_tag.values)))>1]
+        # print(ms)
+
     def generate_artifacts(self):
         self._plot_confidence_by_tag()
         self._plot_confusion_matrix_by_model()
+        # self._multiple_sense()
+        self._latex_table_confidence_by_tags()
+        # self._meta_less_confident()
 
     @classmethod
     def from_partial_objects(
