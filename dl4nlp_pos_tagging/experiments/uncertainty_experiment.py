@@ -226,8 +226,8 @@ class UncertaintyExperiment(Registrable):
             table_string.append(new_line)
         table_string.extend([
             r"\end{tabular}",
-            r"\caption{Mean confidence scores with standard deviation of the character, word and meta model per part-of-speech tag.}",
-            r"\label{tab:confidence-per-tag}",
+            r"\caption{Mean uncertainty of the character, word and meta model per part-of-speech tag.}",
+            r"\label{tab:uncertainty-per-tag}",
             r"\end{table}}",
         ])
         with open(os.path.join(self.serialization_dir, 'tag_confidence_by_model.tex'), 'w+') as handle:
