@@ -84,6 +84,7 @@ class UncertaintyExperiment(Registrable):
                     predicted_label_idx = np.argmax(tag_mean_probability)
 
                     uncertainty_df['instance_id'].append(idx)
+                    uncertainty_df['word_id'].append(w)
                     uncertainty_df['model'].append(model)
                     uncertainty_df['word'].append(word)
 
@@ -93,9 +94,6 @@ class UncertaintyExperiment(Registrable):
                             namespace=self.predictor._model.label_namespace
                         )
                     )
-                    uncertainty_df['actual_confidence_mean'].append(tag_mean_probability[actual_label_idx])
-                    uncertainty_df['actual_confidence_std'].append(tag_std_probability[actual_label_idx])
-
 
                     uncertainty_df['predicted_tag'].append(
                         self.predictor._model.vocab.get_token_from_index(
@@ -104,8 +102,13 @@ class UncertaintyExperiment(Registrable):
                         )
                     )
 
+                    uncertainty_df['actual_confidence_mean'].append(tag_mean_probability[actual_label_idx])
+                    uncertainty_df['actual_confidence_std'].append(tag_std_probability[actual_label_idx])
                     uncertainty_df['predicted_confidence_mean'].append(tag_mean_probability[predicted_label_idx])
                     uncertainty_df['predicted_confidence_std'].append(tag_std_probability[predicted_label_idx])
+
+                    uncertainty_df['mean_probability_distribution'].append(tag_mean_probability)
+
             progress_bar.update(1)
         return uncertainty_df
 
@@ -137,7 +140,7 @@ class UncertaintyExperiment(Registrable):
         for model in self.predictor._model.all_model_keys:
             model_confusion_matrix = incorrect[incorrect['model'] == model]
             model_confusion_matrix = model_confusion_matrix.pivot_table(
-                index="predicted_tag",
+                index="actual_tag",
                 columns="actual_tag",
                 values="correct",
                 aggfunc=np.sum
@@ -237,10 +240,10 @@ class UncertaintyExperiment(Registrable):
         print(accuracy)
 
     def generate_artifacts(self):
-        self._plot_confidence_by_tag()
+        # self._plot_confidence_by_tag()
         self._plot_confusion_matrix_by_model()
-        self._latex_table_confidence_by_tags()
-        self._announce_accuracy()
+        # self._latex_table_confidence_by_tags()
+        # self._announce_accuracy()
 
     @classmethod
     def from_partial_objects(
@@ -250,7 +253,8 @@ class UncertaintyExperiment(Registrable):
         predictor_type: str,
         batch_size: int,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        nr_instances: Optional[int] = 0
+        nr_instances: Optional[int] = None,
+        nr_inference_samples: Optional[int] = 250
     ):
         logger = logging.getLogger(Config.logger_name)
 
@@ -268,6 +272,8 @@ class UncertaintyExperiment(Registrable):
         archive = load_archive(os.path.join(serialization_dir, 'model.tar.gz'), cuda_device=cuda_device)
 
         predictor = Predictor.from_archive(archive, predictor_type)
+        predictor.nr_samples = nr_inference_samples
+        predictor.batch_size = batch_size
 
         test_instances = list(predictor._dataset_reader.read(test_data_path))
         if nr_instances:
