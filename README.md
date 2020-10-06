@@ -1,6 +1,6 @@
-# Deep Learning for Natural Language Processing - POS Tagging
+# Exploring Errors in POS-tagging by Quantifying Model Uncertainty
 
-University of Amsterdam Deep Learning for Natural Language Processing Fall 2020 Mini Project - POS Tagging
+University of Amsterdam Deep Learning for Natural Language Processing Fall 2020 Mini Project
 
 ## Abstract
 
