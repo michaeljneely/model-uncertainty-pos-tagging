@@ -241,9 +241,9 @@ class UncertaintyExperiment(Registrable):
 
     def generate_artifacts(self):
         # self._plot_confidence_by_tag()
-        self._plot_confusion_matrix_by_model()
+        # self._plot_confusion_matrix_by_model()
         # self._latex_table_confidence_by_tags()
-        # self._announce_accuracy()
+        self._announce_accuracy()
 
     @classmethod
     def from_partial_objects(
